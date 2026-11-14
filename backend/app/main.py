@@ -29,6 +29,9 @@ async def health_check():
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
+if (STATIC_DIR / "_next").exists():
+    app.mount("/_next", StaticFiles(directory=str(STATIC_DIR / "_next")), name="next_assets")
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -42,9 +45,14 @@ async def serve_frontend(full_path: str):
     if full_path and target_file.is_file():
         return FileResponse(target_file)
 
-    # Fallback to index.html for root or SPA paths
+    # Support clean URLs like /something -> /something.html
+    html_file = STATIC_DIR / f"{full_path}.html"
+    if full_path and html_file.is_file():
+        return FileResponse(html_file)
+
+    # Fallback to index.html for root or client routes
     index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
         return FileResponse(index_file)
 
-    return {"message": "Static frontend not yet built. Visit /api/health for backend API status."}
+    return {"message": "Static frontend not yet built."}

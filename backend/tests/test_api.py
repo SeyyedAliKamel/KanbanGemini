@@ -13,7 +13,16 @@ class TestAPIDirect(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         with open(response.path, "r", encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("Kanban MVP - Base Setup", content)
+        self.assertIn("Cyberpunk Kanban Board", content)
+        self.assertIn("language-toggle-btn", content)
+
+    def test_serve_frontend_refresh_and_fallback(self):
+        # Direct URL or deep route fallback to index.html
+        response = asyncio.run(serve_frontend("board"))
+        self.assertEqual(response.status_code, 200)
+        with open(response.path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("Cyberpunk Kanban Board", content)
 
 if __name__ == "__main__":
     unittest.main()

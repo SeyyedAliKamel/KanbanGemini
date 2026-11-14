@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { Plus, LayoutGrid } from "lucide-react";
 import { INITIAL_COLUMNS } from "@/data/initialData";
 import { Column, Card, GridSettings, ColumnsLayout } from "@/types/kanban";
+import { Language, translations } from "@/data/translations";
 import { KanbanColumn } from "./KanbanColumn";
 import { Header } from "./Header";
 import { GridSettingsModal } from "./GridSettingsModal";
@@ -22,6 +23,13 @@ export const KanbanBoard: React.FC = () => {
   const [gridSettings, setGridSettings] = useState<GridSettings>(DEFAULT_GRID_SETTINGS);
   const [isGridModalOpen, setIsGridModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [language, setLanguage] = useState<Language>("en");
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => (prev === "en" ? "fa" : "en"));
+  };
+
+  const t = translations[language];
 
   useEffect(() => {
     setIsMounted(true);
@@ -208,10 +216,12 @@ export const KanbanBoard: React.FC = () => {
 
   if (!isMounted) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-[#f1f5f9]">
+      <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-[#f1f5f9]" dir={language === "fa" ? "rtl" : "ltr"}>
         <Header
           totalCards={INITIAL_COLUMNS.reduce((a, c) => a + c.cards.length, 0)}
           columnCount={INITIAL_COLUMNS.length}
+          language={language}
+          onToggleLanguage={toggleLanguage}
           onOpenGridSettings={() => {}}
         />
         <main className="flex-1 p-8 flex items-center justify-center">
@@ -230,11 +240,14 @@ export const KanbanBoard: React.FC = () => {
     <div
       className="min-h-screen flex flex-col text-[#f1f5f9] transition-all duration-300"
       style={gridStyle}
+      dir={language === "fa" ? "rtl" : "ltr"}
       data-testid="kanban-app-container"
     >
       <Header
         totalCards={totalCards}
         columnCount={columns.length}
+        language={language}
+        onToggleLanguage={toggleLanguage}
         onOpenGridSettings={() => setIsGridModalOpen(true)}
       />
 
