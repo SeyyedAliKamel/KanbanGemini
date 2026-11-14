@@ -1,0 +1,3 @@
+:HL["/KanbanGemini/_next/static/css/1740f19be54c620d.css","style"]
+1:[["children",{"s":"__PAGE__","h":160}]]
+0:{"b":"Uxh1XUtuC3H810UFwq3nO","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
