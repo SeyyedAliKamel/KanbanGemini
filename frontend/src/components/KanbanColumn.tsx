@@ -14,6 +14,7 @@ interface KanbanColumnProps {
   onRenameColumn: (columnId: string, newTitle: string) => void;
   onAddCard: (columnId: string, title: string, details: string) => void;
   onDeleteCard: (columnId: string, cardId: string) => void;
+  onEditCard?: (cardId: string, title: string, details: string) => void;
   onDeleteColumn: (columnId: string) => void;
   columnDragHandleProps?: any;
   isGridMode?: boolean;
@@ -64,6 +65,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onRenameColumn,
   onAddCard,
   onDeleteCard,
+  onEditCard,
   onDeleteColumn,
   columnDragHandleProps,
   isGridMode = false,
@@ -243,6 +245,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   index={idx}
                   columnId={column.id}
                   onDelete={onDeleteCard}
+                  onEdit={onEditCard}
                 />
               ))}
               {provided.placeholder}

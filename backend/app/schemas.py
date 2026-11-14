@@ -46,3 +46,32 @@ class BoardResponse(BaseModel):
     user_id: str
     title: str
     columns: List[ColumnResponse] = []
+
+# AI Schemas
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="Role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message text content")
+
+class AIChatRequest(BaseModel):
+    message: str = Field(..., min_length=1)
+    history: List[ChatMessage] = []
+
+class CardAction(BaseModel):
+    action: str
+    column_id: Optional[str] = None
+    column_title: Optional[str] = None
+    title: Optional[str] = None
+    details: Optional[str] = None
+    card_id: Optional[str] = None
+    target_column_id: Optional[str] = None
+    target_column_title: Optional[str] = None
+    position: Optional[int] = None
+
+class AIModelOutput(BaseModel):
+    response: str
+    actions: List[CardAction] = []
+
+class AIChatResponse(BaseModel):
+    response: str
+    actions_applied: int = 0
+    board: BoardResponse

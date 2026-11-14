@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, LayoutGrid } from "lucide-react";
+import { Plus, LayoutGrid, AlertTriangle } from "lucide-react";
 import { INITIAL_COLUMNS } from "@/data/initialData";
 import { Column, Card, GridSettings, ColumnsLayout } from "@/types/kanban";
 import { Language, translations } from "@/data/translations";
@@ -10,6 +10,16 @@ import { KanbanColumn } from "./KanbanColumn";
 import { Header } from "./Header";
 import { GridSettingsModal } from "./GridSettingsModal";
 import { AuthModal } from "./AuthModal";
+import {
+  fetchBoard,
+  apiCreateColumn,
+  apiRenameColumn,
+  apiDeleteColumn,
+  apiCreateCard,
+  apiUpdateCard,
+  apiMoveCard,
+  apiDeleteCard,
+} from "@/lib/api";
 
 const DEFAULT_GRID_SETTINGS: GridSettings = {
   visible: true,
@@ -31,6 +41,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   const [language, setLanguage] = useState<Language>("en");
   const [currentUser, setCurrentUser] = useState<string | null>(initialUser ?? null);
   const [authChecked, setAuthChecked] = useState(initialUser !== undefined);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "en" ? "fa" : "en"));
@@ -38,6 +49,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
 
   const t = translations[language];
 
+  // Check authentication session on mount
   useEffect(() => {
     setIsMounted(true);
     if (initialUser !== undefined) {
@@ -57,6 +69,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
       .finally(() => setAuthChecked(true));
   }, [initialUser]);
 
+  // Load board from API when authenticated
+  useEffect(() => {
+    if (currentUser) {
+      fetchBoard()
+        .then((cols) => {
+          if (cols && cols.length > 0) {
+            setColumns(cols);
+          }
+        })
+        .catch(() => {
+          // If offline or initial fallback
+        });
+    }
+  }, [currentUser]);
+
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -69,8 +96,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   const totalCards = columns.reduce((acc, col) => acc + col.cards.length, 0);
   const isGridMode = gridSettings.columnsPerRow !== "scroll";
 
-  const handleDragEnd = (result: DropResult) => {
-    const { source, destination, type } = result;
+  const handleDragEnd = async (result: DropResult) => {
+    const { source, destination, draggableId } = result;
 
     if (!destination) return;
 
@@ -81,41 +108,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
       return;
     }
 
-    // Handle column reordering
-    if (type === "column") {
-      setColumns((prev) => {
-        const newCols = Array.from(prev);
-        const [movedCol] = newCols.splice(source.index, 1);
-        newCols.splice(destination.index, 0, movedCol);
-        return newCols;
-      });
-      return;
-    }
+    const previousColumns = columns;
+    const sourceColIndex = columns.findIndex((col) => col.id === source.droppableId);
+    const destColIndex = columns.findIndex((col) => col.id === destination.droppableId);
 
-    // Handle card movement
-    setColumns((prevColumns) => {
-      const sourceColIndex = prevColumns.findIndex(
-        (col) => col.id === source.droppableId
-      );
-      const destColIndex = prevColumns.findIndex(
-        (col) => col.id === destination.droppableId
-      );
+    if (sourceColIndex === -1 || destColIndex === -1) return;
 
-      if (sourceColIndex === -1 || destColIndex === -1) return prevColumns;
+    const newColumns = [...columns];
 
-      const newColumns = [...prevColumns];
-
-      // Moving within the same column
-      if (sourceColIndex === destColIndex) {
-        const targetCol = { ...newColumns[sourceColIndex] };
-        const newCards = Array.from(targetCol.cards);
-        const [movedCard] = newCards.splice(source.index, 1);
-        newCards.splice(destination.index, 0, movedCard);
-        targetCol.cards = newCards;
-        newColumns[sourceColIndex] = targetCol;
-        return newColumns;
-      }
-
+    // Moving within the same column
+    if (sourceColIndex === destColIndex) {
+      const targetCol = { ...newColumns[sourceColIndex] };
+      const newCards = Array.from(targetCol.cards);
+      const [movedCard] = newCards.splice(source.index, 1);
+      newCards.splice(destination.index, 0, movedCard);
+      targetCol.cards = newCards;
+      newColumns[sourceColIndex] = targetCol;
+    } else {
       // Moving across different columns
       const sourceCol = { ...newColumns[sourceColIndex] };
       const destCol = { ...newColumns[destColIndex] };
@@ -131,72 +140,116 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
 
       newColumns[sourceColIndex] = sourceCol;
       newColumns[destColIndex] = destCol;
+    }
 
-      return newColumns;
-    });
+    // Optimistic UI state update
+    setColumns(newColumns);
+
+    // Sync with backend API
+    try {
+      await apiMoveCard(draggableId, destination.droppableId, destination.index);
+    } catch {
+      // Revert optimistic update on failure
+      setColumns(previousColumns);
+      setApiError("Failed to synchronize card position with server.");
+    }
   };
 
-  const handleAddCard = (columnId: string, title: string, details: string) => {
-    const newCard: Card = {
-      id: `card-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+  const handleAddCard = async (columnId: string, title: string, details: string) => {
+    const localId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const tempCard: Card = {
+      id: localId,
       title,
       details,
     };
-
-    setColumns((prevColumns) =>
-      prevColumns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            cards: [...col.cards, newCard],
-          };
-        }
-        return col;
-      })
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.id === columnId ? { ...col, cards: [...col.cards, tempCard] } : col
+      )
     );
+
+    try {
+      const created = await apiCreateCard(columnId, title, details);
+      setColumns((prev) =>
+        prev.map((col) =>
+          col.id === columnId
+            ? { ...col, cards: col.cards.map((c) => (c.id === localId ? created : c)) }
+            : col
+        )
+      );
+    } catch {
+      // Keep optimistic card
+    }
   };
 
-  const handleDeleteCard = (columnId: string, cardId: string) => {
-    setColumns((prevColumns) =>
-      prevColumns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            cards: col.cards.filter((c) => c.id !== cardId),
-          };
-        }
-        return col;
-      })
+  const handleEditCard = async (cardId: string, title: string, details: string) => {
+    setColumns((prev) =>
+      prev.map((col) => ({
+        ...col,
+        cards: col.cards.map((c) => (c.id === cardId ? { ...c, title, details } : c)),
+      }))
     );
+    try {
+      await apiUpdateCard(cardId, title, details);
+    } catch {
+      setApiError("Failed to update card on server.");
+    }
   };
 
-  const handleRenameColumn = (columnId: string, newTitle: string) => {
-    setColumns((prevColumns) =>
-      prevColumns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            title: newTitle,
-          };
-        }
-        return col;
-      })
+  const handleDeleteCard = async (columnId: string, cardId: string) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.id === columnId
+          ? { ...col, cards: col.cards.filter((c) => c.id !== cardId) }
+          : col
+      )
     );
+    try {
+      await apiDeleteCard(cardId);
+    } catch {
+      // Ignore
+    }
   };
 
-  const handleAddColumn = () => {
-    const newColId = `col-${Date.now()}`;
-    const newColumn: Column = {
-      id: newColId,
-      title: `LANE ${columns.length + 1}`,
+  const handleRenameColumn = async (columnId: string, newTitle: string) => {
+    setColumns((prev) =>
+      prev.map((col) => (col.id === columnId ? { ...col, title: newTitle } : col))
+    );
+    try {
+      await apiRenameColumn(columnId, newTitle);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleAddColumn = async () => {
+    const tempId = `col-${Date.now()}`;
+    const title = `LANE ${columns.length + 1}`;
+    const newCol: Column = {
+      id: tempId,
+      title,
       cards: [],
     };
-    setColumns((prev) => [...prev, newColumn]);
+    setColumns((prev) => [...prev, newCol]);
+
+    try {
+      const created = await apiCreateColumn(title);
+      setColumns((prev) =>
+        prev.map((c) => (c.id === tempId ? created : c))
+      );
+    } catch {
+      // Keep optimistic
+    }
   };
 
-  const handleDeleteColumn = (columnId: string) => {
+  const handleDeleteColumn = async (columnId: string) => {
     if (columns.length <= 1) return;
     setColumns((prev) => prev.filter((col) => col.id !== columnId));
+    try {
+      await apiDeleteColumn(columnId);
+    } catch {
+      // Ignore
+    }
   };
 
   const handleLayoutChange = (layout: ColumnsLayout) => {
@@ -286,6 +339,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
         onOpenGridSettings={() => setIsGridModalOpen(true)}
       />
 
+      {/* Sync Error Notification Banner */}
+      {apiError && (
+        <div className="bg-[#ff007f]/20 border-b border-[#ff007f]/50 px-6 py-2.5 flex items-center justify-between text-xs font-mono text-[#ff007f] z-40">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>[SYNC ERROR] {apiError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApiError(null)}
+            className="underline hover:text-white font-bold cursor-pointer ml-4"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
+
       {/* Auth Modal Overlay when not authenticated */}
       <AuthModal
         isOpen={!currentUser}
@@ -296,145 +366,116 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
       {/* Main Board View with blur when unauthenticated */}
       <div className={`flex-1 flex flex-col ${!currentUser ? "filter blur-[6px] pointer-events-none select-none" : ""}`}>
         {/* Sub-header status & layout toolbar */}
-      <div className="border-b border-[#00f0ff]/10 bg-[#0a0e1a]/70 px-6 py-2.5 backdrop-blur-sm">
-        <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#94a3b8]">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-[#00f0ff]/80 font-semibold tracking-wider">
-              [ SYSTEM ACTIVE ]
-            </span>
-            <span className="hidden md:inline text-[#94a3b8]/40">//</span>
-            <span className="hidden md:inline">
-              LANES: <span className="text-[#f1f5f9]">{columns.length}</span>
-            </span>
-            <span className="hidden md:inline text-[#94a3b8]/40">//</span>
-            <span className="hidden md:inline" data-testid="grid-status-info">
-              GRID: <span className="text-[#00f0ff]">{gridSettings.visible ? `${gridSettings.size}PX ${gridSettings.color.toUpperCase()}` : "INACTIVE"}</span>
-            </span>
-
-            {/* Quick Columns Per Row Switcher */}
-            <div className="flex items-center gap-2 pl-2 border-l border-[#00f0ff]/20">
-              <span className="text-[#00f0ff] font-bold flex items-center gap-1">
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>GRID / ROW:</span>
+        <div className="border-b border-[#00f0ff]/10 bg-[#0a0e1a]/70 px-6 py-2.5 backdrop-blur-sm">
+          <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#94a3b8]">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-[#00f0ff]/80 font-semibold tracking-wider">
+                [ SYSTEM ACTIVE ]
               </span>
-              <div
-                className="flex items-center gap-1 bg-[#121829] border border-[#00f0ff]/30 p-0.5 rounded-lg shadow-sm"
-                data-testid="layout-switch-bar"
-              >
-                {[
-                  { id: "scroll", label: "SCROLL" },
-                  { id: "2", label: "2" },
-                  { id: "3", label: "3" },
-                  { id: "4", label: "4" },
-                  { id: "5", label: "5" },
-                  { id: "fit", label: "FIT" },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleLayoutChange(opt.id as ColumnsLayout)}
-                    data-testid={`layout-btn-${opt.id}`}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider transition-all cursor-pointer ${
-                      gridSettings.columnsPerRow === opt.id
-                        ? "bg-[#00f0ff] text-black shadow-[0_0_10px_rgba(0,240,255,0.6)]"
-                        : "text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#182138]"
-                    }`}
-                    title={
-                      opt.id === "scroll"
-                        ? "Horizontal Scroll Mode"
-                        : opt.id === "fit"
-                        ? "Auto-Fit Columns (No Scroll)"
-                        : `${opt.label} Columns Per Row (No Scroll)`
-                    }
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <span className="hidden md:inline text-[#94a3b8]/40">//</span>
+              <span className="hidden md:inline">
+                LANES: <span className="text-[#f1f5f9]">{columns.length}</span>
+              </span>
+              <span className="hidden md:inline text-[#94a3b8]/40">//</span>
+              <span className="hidden md:inline" data-testid="grid-status-info">
+                GRID: <span className="text-[#00f0ff]">{gridSettings.visible ? `${gridSettings.size}PX ${gridSettings.color.toUpperCase()}` : "INACTIVE"}</span>
+              </span>
+
+              {/* Quick Columns Per Row Switcher */}
+              <div className="flex items-center gap-1.5 bg-[#121829] px-2 py-1 rounded border border-[#00f0ff]/20">
+                <LayoutGrid className="w-3 h-3 text-[#00f0ff]" />
+                <span className="text-[#94a3b8]">ROW:</span>
+                {(["scroll", "2", "3", "4", "5", "fit"] as ColumnsLayout[]).map(
+                  (layout) => (
+                    <button
+                      key={layout}
+                      type="button"
+                      onClick={() => handleLayoutChange(layout)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                        gridSettings.columnsPerRow === layout
+                          ? "bg-[#00f0ff] text-[#0a0e1a]"
+                          : "text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#00f0ff]/10"
+                      }`}
+                      data-testid={`layout-btn-${layout}`}
+                    >
+                      {layout.toUpperCase()}
+                    </button>
+                  )
+                )}
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleAddColumn}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#00f0ff]/40 bg-[#00f0ff]/10 text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-mono text-[10px] font-bold tracking-wider transition-all cursor-pointer shadow-sm hover:shadow-[0_0_10px_rgba(0,240,255,0.3)]"
-              data-testid="header-add-column-btn"
-            >
-              <Plus className="w-3 h-3" />
-              <span>+ NEW LANE</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-[#00f0ff]/60 tracking-wider">
+                PROTOCOL: REALTIME_PANGEA_DND
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Board Viewport */}
-      <main
-        className={`flex-1 p-6 md:p-8 ${
-          isGridMode ? "overflow-x-hidden w-full max-w-[1720px] mx-auto" : "overflow-x-auto"
-        }`}
-      >
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable
-            droppableId="board-columns"
-            direction={isGridMode ? "horizontal" : "horizontal"}
-            type="column"
-          >
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`${getBoardLayoutClass()} mx-auto max-w-[1720px]`}
-                data-testid="kanban-board"
-              >
-                {columns.map((column, index) => (
-                  <Draggable key={column.id} draggableId={column.id} index={index}>
-                    {(columnProvided) => (
-                      <div
-                        ref={columnProvided.innerRef}
-                        {...columnProvided.draggableProps}
-                        className={isGridMode ? "w-full min-w-0" : ""}
-                      >
-                        <KanbanColumn
-                          column={column}
-                          columnIndex={index}
-                          columnCount={columns.length}
-                          onRenameColumn={handleRenameColumn}
-                          onAddCard={handleAddCard}
-                          onDeleteCard={handleDeleteCard}
-                          onDeleteColumn={handleDeleteColumn}
-                          columnDragHandleProps={columnProvided.dragHandleProps}
-                          isGridMode={isGridMode}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-
-                {/* Add New Column Card Button */}
+        {/* Board Workspace */}
+        <main
+          className="flex-1 p-6 overflow-x-auto min-h-0"
+          data-testid="kanban-main-workspace"
+        >
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="board" direction="horizontal" type="column">
+              {(provided) => (
                 <div
-                  className={`${
-                    isGridMode ? "w-full min-w-0 min-h-32" : "w-80 min-w-80 flex-shrink-0"
-                  } pt-0`}
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={`${getBoardLayoutClass()} mx-auto max-w-[1720px]`}
+                  data-testid="kanban-board"
                 >
-                  <button
-                    type="button"
-                    onClick={handleAddColumn}
-                    className="w-full h-full min-h-32 rounded-xl border-2 border-dashed border-[#00f0ff]/30 hover:border-[#00f0ff] bg-[#121829]/40 hover:bg-[#00f0ff]/10 text-xs font-mono font-bold tracking-widest text-[#00f0ff] hover:shadow-[0_0_20px_rgba(0,240,255,0.25)] flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group p-4"
-                    data-testid="add-column-button"
+                  {columns.map((column, index) => (
+                    <Draggable key={column.id} draggableId={column.id} index={index}>
+                      {(columnProvided) => (
+                        <div
+                          ref={columnProvided.innerRef}
+                          {...columnProvided.draggableProps}
+                          className={isGridMode ? "w-full min-w-0" : ""}
+                        >
+                          <KanbanColumn
+                            column={column}
+                            columnIndex={index}
+                            columnCount={columns.length}
+                            onRenameColumn={handleRenameColumn}
+                            onAddCard={handleAddCard}
+                            onDeleteCard={handleDeleteCard}
+                            onEditCard={handleEditCard}
+                            onDeleteColumn={handleDeleteColumn}
+                            columnDragHandleProps={columnProvided.dragHandleProps}
+                            isGridMode={isGridMode}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+
+                  {/* Add New Column Card Button */}
+                  <div
+                    className={`${
+                      isGridMode ? "w-full min-w-0 min-h-32" : "w-80 min-w-80 flex-shrink-0"
+                    } pt-0`}
                   >
-                    <div className="w-8 h-8 rounded-full border border-[#00f0ff]/40 bg-[#0a0e1a] flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Plus className="w-4 h-4 text-[#00f0ff]" />
-                    </div>
-                    <span>+ ADD NEW LANE</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleAddColumn}
+                      className="w-full h-full min-h-32 rounded-xl border-2 border-dashed border-[#00f0ff]/30 hover:border-[#00f0ff] bg-[#121829]/40 hover:bg-[#00f0ff]/10 text-xs font-mono font-bold tracking-widest text-[#00f0ff] hover:shadow-[0_0_20px_rgba(0,240,255,0.25)] flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group p-4"
+                      data-testid="add-column-button"
+                    >
+                      <div className="w-8 h-8 rounded-full border border-[#00f0ff]/40 bg-[#0a0e1a] flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus className="w-4 h-4 text-[#00f0ff]" />
+                      </div>
+                      <span>+ ADD NEW LANE</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </main>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </main>
       </div>
 
       {/* Grid Settings HUD Modal */}

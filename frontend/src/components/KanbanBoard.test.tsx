@@ -69,7 +69,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("adds a new column when add column button is clicked", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -82,7 +82,9 @@ describe("KanbanBoard Unit Tests", () => {
       expect(screen.getByText("LANE 6")).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("grid-lanes-count")).toHaveTextContent("6 LANES");
+    await waitFor(() => {
+      expect(screen.getByTestId("grid-lanes-count")).toHaveTextContent("6 LANES");
+    });
   });
 
   it("deletes a column when delete column button is clicked", async () => {

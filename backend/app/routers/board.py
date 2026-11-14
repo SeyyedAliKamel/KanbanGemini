@@ -25,30 +25,33 @@ def get_user_board(cursor, username: str):
         raise HTTPException(status_code=404, detail="Board not found")
     return board
 
+def fetch_full_board(conn, username: str) -> BoardResponse:
+    cursor = conn.cursor()
+    board = get_user_board(cursor, username)
+    
+    # Fetch columns
+    cursor.execute("SELECT * FROM columns WHERE board_id = ? ORDER BY position ASC", (board["id"],))
+    column_rows = cursor.fetchall()
+    
+    columns = []
+    for col_row in column_rows:
+        cursor.execute("SELECT * FROM cards WHERE column_id = ? ORDER BY position ASC", (col_row["id"],))
+        card_rows = cursor.fetchall()
+        cards = [CardResponse(**dict(c)) for c in card_rows]
+        
+        col_dict = dict(col_row)
+        col_dict["cards"] = cards
+        columns.append(ColumnResponse(**col_dict))
+        
+    board_dict = dict(board)
+    board_dict["columns"] = columns
+    return BoardResponse(**board_dict)
+
 @router.get("", response_model=BoardResponse)
 async def get_board(username: str = Depends(require_authenticated_user)):
     conn = get_connection()
-    cursor = conn.cursor()
     try:
-        board = get_user_board(cursor, username)
-        
-        # Fetch columns
-        cursor.execute("SELECT * FROM columns WHERE board_id = ? ORDER BY position ASC", (board["id"],))
-        column_rows = cursor.fetchall()
-        
-        columns = []
-        for col_row in column_rows:
-            cursor.execute("SELECT * FROM cards WHERE column_id = ? ORDER BY position ASC", (col_row["id"],))
-            card_rows = cursor.fetchall()
-            cards = [CardResponse(**dict(c)) for c in card_rows]
-            
-            col_dict = dict(col_row)
-            col_dict["cards"] = cards
-            columns.append(ColumnResponse(**col_dict))
-            
-        board_dict = dict(board)
-        board_dict["columns"] = columns
-        return BoardResponse(**board_dict)
+        return fetch_full_board(conn, username)
     finally:
         conn.close()
 

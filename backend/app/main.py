@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.auth import router as auth_router, require_authenticated_user
 from backend.app.routers.board import router as board_router
+from backend.app.routers.ai import router as ai_router
 from backend.app.database import init_db
 
 # Initialize database on startup
@@ -23,9 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Authentication & Board Routers
+# Include Authentication, Board & AI Routers
 app.include_router(auth_router)
 app.include_router(board_router)
+app.include_router(ai_router)
 
 # Test/Health API Route
 @app.get("/api/health")
