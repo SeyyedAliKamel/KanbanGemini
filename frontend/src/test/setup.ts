@@ -27,6 +27,23 @@ global.fetch = vi.fn((url: string | URL | Request, init?: RequestInit) => {
     // Ignore JSON parse errors
   }
 
+  if (urlStr.includes("/api/ai/chat")) {
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          response: "AI Assistant mock response.",
+          actions_applied: bodyData?.message?.includes("add") ? 1 : 0,
+          board: {
+            id: "brd-test",
+            user_id: "usr-test",
+            title: "Test Board",
+            columns: INITIAL_COLUMNS,
+          },
+        }),
+    } as Response);
+  }
+
   if (urlStr.includes("/api/board/cards")) {
     return Promise.resolve({
       ok: true,

@@ -35,6 +35,17 @@ export interface Translations {
   invalidCredentials: string;
   logout: string;
   userBadge: string;
+  aiAssistant: string;
+  aiSubtitle: string;
+  aiPlaceholder: string;
+  aiSend: string;
+  aiThinking: string;
+  aiQuickPrompt1: string;
+  aiQuickPrompt2: string;
+  aiQuickPrompt3: string;
+  aiAppliedBadge: string;
+  aiToggleBtn: string;
+  aiClearChat: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -73,6 +84,17 @@ export const translations: Record<Language, Translations> = {
     invalidCredentials: "Invalid credentials. Use user / password.",
     logout: "LOGOUT",
     userBadge: "OPERATOR:",
+    aiAssistant: "AI ASSISTANT",
+    aiSubtitle: "Manage cards with natural language",
+    aiPlaceholder: "Command AI (e.g. Add card 'Sync DB' to Backlog)...",
+    aiSend: "SEND",
+    aiThinking: "PROCESSING...",
+    aiQuickPrompt1: "Add card 'Network Patch' to first lane",
+    aiQuickPrompt2: "Summarize status of all lanes",
+    aiQuickPrompt3: "Move card-1 to the last column",
+    aiAppliedBadge: "actions executed on board",
+    aiToggleBtn: "AI COPILOT",
+    aiClearChat: "RESET",
   },
   fa: {
     cyberTitle: "سایبر",
@@ -109,5 +131,16 @@ export const translations: Record<Language, Translations> = {
     invalidCredentials: "نام کاربری یا رمز عبور اشتباه است.",
     logout: "خروج",
     userBadge: "کاربر:",
+    aiAssistant: "دستیار هوش مصنوعی",
+    aiSubtitle: "مدیریت و سازماندهی کارت‌ها با زبان طبیعی",
+    aiPlaceholder: "دستور خود را بنویسید (مثلاً: کارت جدید در ستون اول ایجاد کن)...",
+    aiSend: "ارسال",
+    aiThinking: "در حال پردازش...",
+    aiQuickPrompt1: "یک کارت جدید به نام تست به ستون اول اضافه کن",
+    aiQuickPrompt2: "وضعیت ستون‌ها و کارت‌ها را خلاصه کن",
+    aiQuickPrompt3: "کارت اول را به ستون آخر منتقل کن",
+    aiAppliedBadge: "عملیات روی برد اعمال شد",
+    aiToggleBtn: "دستیار هوشمند",
+    aiClearChat: "پاک‌سازی",
   },
 };

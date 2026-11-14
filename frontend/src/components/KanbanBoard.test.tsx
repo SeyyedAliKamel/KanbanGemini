@@ -4,7 +4,7 @@ import { KanbanBoard } from "./KanbanBoard";
 
 describe("KanbanBoard Unit Tests", () => {
   it("renders exactly 5 initial columns and initial dummy cards", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("allows renaming a column and saving new title", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("cancels column renaming when cancel button is clicked", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("deletes a column when delete column button is clicked", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -101,11 +101,13 @@ describe("KanbanBoard Unit Tests", () => {
       expect(screen.queryByTestId("column-col-5")).not.toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("grid-lanes-count")).toHaveTextContent("4 LANES");
+    await waitFor(() => {
+      expect(screen.getByTestId("grid-lanes-count")).toHaveTextContent("4 LANES");
+    });
   });
 
   it("opens grid calibration HUD and updates grid settings", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -137,7 +139,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("toggles columns per row to eliminate horizontal scroll", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -163,7 +165,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("adds a new card to a column successfully", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
@@ -199,7 +201,7 @@ describe("KanbanBoard Unit Tests", () => {
   });
 
   it("deletes a card when delete button is clicked", async () => {
-    render(<KanbanBoard />);
+    render(<KanbanBoard initialUser="user" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("kanban-board")).toBeInTheDocument();

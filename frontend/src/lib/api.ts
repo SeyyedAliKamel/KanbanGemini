@@ -113,3 +113,53 @@ export async function apiDeleteCard(cardId: string): Promise<void> {
   });
   if (!res.ok) throw new Error("Failed to delete card");
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AIChatResponse {
+  response: string;
+  actions_applied: number;
+  board: ApiBoard;
+}
+
+export async function apiChatWithAI(
+  message: string,
+  history: ChatMessage[]
+): Promise<{ response: string; actionsApplied: number; columns: Column[] }> {
+  const res = await fetch("/api/ai/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+
+  if (!res.ok) {
+    let errorDetail = "AI request failed";
+    try {
+      const errJson = await res.json();
+      if (errJson.detail) errorDetail = errJson.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorDetail);
+  }
+
+  const data: AIChatResponse = await res.json();
+  const columns: Column[] = data.board.columns.map((col) => ({
+    id: col.id,
+    title: col.title,
+    cards: col.cards.map((c) => ({
+      id: c.id,
+      title: c.title,
+      details: c.details,
+    })),
+  }));
+
+  return {
+    response: data.response,
+    actionsApplied: data.actions_applied,
+    columns,
+  };
+}

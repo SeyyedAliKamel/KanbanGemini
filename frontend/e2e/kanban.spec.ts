@@ -3,6 +3,14 @@ import { test, expect } from "@playwright/test";
 test.describe("Cyberpunk Kanban Board E2E Tests", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
+    // If auth modal is visible, authenticate
+    const authModal = page.getByTestId("auth-modal");
+    if (await authModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await page.getByTestId("login-username-input").fill("user");
+      await page.getByTestId("login-password-input").fill("password");
+      await page.getByTestId("login-submit-btn").click();
+      await expect(authModal).not.toBeVisible();
+    }
     await expect(page.getByTestId("kanban-board")).toBeVisible();
   });
 
@@ -161,5 +169,42 @@ test.describe("Cyberpunk Kanban Board E2E Tests", () => {
 
     const col2 = page.getByTestId("column-col-2");
     await expect(col2.getByText("Neural Interface Driver")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("toggles AI copilot sidebar and verifies ephemeral chat history", async ({ page }) => {
+    // Open AI sidebar
+    const toggleBtn = page.getByTestId("toggle-ai-chat-btn");
+    await expect(toggleBtn).toBeVisible();
+    await toggleBtn.click();
+
+    const sidebar = page.getByTestId("ai-chat-sidebar");
+    await expect(sidebar).toBeVisible();
+
+    // Check quick prompt buttons
+    const quickPill = page.getByTestId("quick-prompt-0");
+    await expect(quickPill).toBeVisible();
+
+    // Type a message in input
+    const input = page.getByTestId("ai-input");
+    await input.fill("Hello AI Assistant");
+    await page.getByTestId("ai-send-btn").click();
+
+    // User message appears
+    await expect(page.getByText("Hello AI Assistant")).toBeVisible();
+
+    // Close sidebar
+    await page.getByTestId("ai-close-sidebar").click();
+    await expect(sidebar).not.toBeVisible();
+
+    // Reopen sidebar: message should still be in current session
+    await toggleBtn.click();
+    await expect(sidebar).toBeVisible();
+    await expect(page.getByText("Hello AI Assistant")).toBeVisible();
+
+    // Refresh page: chat history is ephemeral and resets
+    await page.reload();
+    await expect(page.getByTestId("kanban-board")).toBeVisible();
+    await toggleBtn.click();
+    await expect(page.getByText("Hello AI Assistant")).not.toBeVisible();
   });
 });

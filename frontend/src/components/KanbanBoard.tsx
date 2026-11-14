@@ -10,6 +10,7 @@ import { KanbanColumn } from "./KanbanColumn";
 import { Header } from "./Header";
 import { GridSettingsModal } from "./GridSettingsModal";
 import { AuthModal } from "./AuthModal";
+import { AIChatSidebar } from "./AIChatSidebar";
 import {
   fetchBoard,
   apiCreateColumn,
@@ -42,6 +43,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   const [currentUser, setCurrentUser] = useState<string | null>(initialUser ?? null);
   const [authChecked, setAuthChecked] = useState(initialUser !== undefined);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
 
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "en" ? "fa" : "en"));
@@ -334,6 +336,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
         columnCount={columns.length}
         language={language}
         currentUser={currentUser}
+        isAIChatOpen={isAIChatOpen}
+        onToggleAIChat={() => setIsAIChatOpen((prev) => !prev)}
         onToggleLanguage={toggleLanguage}
         onLogout={handleLogout}
         onOpenGridSettings={() => setIsGridModalOpen(true)}
@@ -487,6 +491,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
         }
         onClose={() => setIsGridModalOpen(false)}
         onReset={() => setGridSettings(DEFAULT_GRID_SETTINGS)}
+      />
+
+      {/* AI Copilot Sidebar */}
+      <AIChatSidebar
+        isOpen={isAIChatOpen && !!currentUser}
+        onClose={() => setIsAIChatOpen(false)}
+        language={language}
+        onBoardUpdate={(newCols) => setColumns(newCols)}
       />
     </div>
   );

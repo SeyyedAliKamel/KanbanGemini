@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Terminal, Activity, Layers, Sliders, Languages, LogOut, UserCheck } from "lucide-react";
+import { Terminal, Activity, Layers, Sliders, Languages, LogOut, UserCheck, Bot } from "lucide-react";
 import { Language, translations } from "@/data/translations";
 
 interface HeaderProps {
@@ -9,6 +9,8 @@ interface HeaderProps {
   columnCount: number;
   language: Language;
   currentUser: string | null;
+  isAIChatOpen?: boolean;
+  onToggleAIChat?: () => void;
   onToggleLanguage: () => void;
   onLogout: () => void;
   onOpenGridSettings: () => void;
@@ -19,6 +21,8 @@ export const Header: React.FC<HeaderProps> = ({
   columnCount,
   language,
   currentUser,
+  isAIChatOpen = false,
+  onToggleAIChat,
   onToggleLanguage,
   onLogout,
   onOpenGridSettings,
@@ -87,6 +91,25 @@ export const Header: React.FC<HeaderProps> = ({
             <Languages className="w-3.5 h-3.5 text-[#209dd7]" />
             <span>{t.languageToggle}</span>
           </button>
+
+          {/* AI Copilot Toggle Button */}
+          {currentUser && onToggleAIChat && (
+            <button
+              type="button"
+              onClick={onToggleAIChat}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
+                isAIChatOpen
+                  ? "bg-[#753991] text-white border-[#753991] shadow-[0_0_15px_rgba(117,57,145,0.6)]"
+                  : "bg-[#121829] text-[#ecad0a] border-[#ecad0a]/40 hover:bg-[#ecad0a]/15 hover:shadow-[0_0_12px_rgba(236,173,10,0.3)]"
+              }`}
+              data-testid="toggle-ai-chat-btn"
+              title={t.aiToggleBtn}
+              aria-label={t.aiToggleBtn}
+            >
+              <Bot className="w-4 h-4 text-[#ecad0a]" />
+              <span className="hidden sm:inline">{t.aiToggleBtn}</span>
+            </button>
+          )}
 
           {/* Grid Settings Button */}
           <button
