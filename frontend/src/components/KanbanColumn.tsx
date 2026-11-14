@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Droppable } from "@hello-pangea/dnd";
 import { Plus, Edit2, Check, X, Trash2, GripHorizontal } from "lucide-react";
 import { Column } from "@/types/kanban";
+import { ThemeVariant } from "@/types/theme";
 import { KanbanCard } from "./KanbanCard";
 import { AddCardModal } from "./AddCardModal";
 
@@ -18,6 +19,7 @@ interface KanbanColumnProps {
   onDeleteColumn: (columnId: string) => void;
   columnDragHandleProps?: any;
   isGridMode?: boolean;
+  themeVariant?: ThemeVariant;
 }
 
 const COLUMN_THEMES = [
@@ -69,6 +71,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onDeleteColumn,
   columnDragHandleProps,
   isGridMode = false,
+  themeVariant = "cyberpunk",
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(column.title);
@@ -76,6 +79,118 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const theme = COLUMN_THEMES[columnIndex % COLUMN_THEMES.length];
+
+  const getColumnClasses = () => {
+    const layoutW = isGridMode ? "w-full min-w-0 max-w-none" : "w-80 min-w-80 max-w-80";
+    if (themeVariant === "office") {
+      return `${layoutW} rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 shadow-xs`;
+    }
+    if (themeVariant === "cozy") {
+      return `${layoutW} rounded-3xl border border-amber-200/70 dark:border-stone-800 bg-[#fbf7f0]/95 dark:bg-stone-900/90 shadow-md`;
+    }
+    if (themeVariant === "brutal") {
+      return `${layoutW} rounded-none border-2 border-black dark:border-white bg-white dark:bg-[#121212] shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#fff]`;
+    }
+    return `${layoutW} rounded-xl border ${theme.border} bg-[#121829]/95 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]`;
+  };
+
+  const renderTopBar = () => {
+    if (themeVariant === "office") return null;
+    if (themeVariant === "cozy") {
+      return <div className="h-[3px] w-full bg-gradient-to-r from-amber-400 to-orange-400 opacity-60" />;
+    }
+    if (themeVariant === "brutal") {
+      return <div className="h-2 w-full bg-black dark:bg-yellow-400 border-b-2 border-black dark:border-white" />;
+    }
+    return <div className={`h-[3px] w-full bg-gradient-to-r ${theme.topGradient}`} />;
+  };
+
+  const renderAddButton = () => {
+    if (themeVariant === "office") {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-sans font-medium transition-colors cursor-pointer"
+          data-testid={`add-card-button-${column.id}`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>+ Add Card</span>
+        </button>
+      );
+    }
+    if (themeVariant === "cozy") {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-200 text-xs font-semibold border border-amber-300/40 dark:border-amber-700/40 transition-all cursor-pointer shadow-xs"
+          data-testid={`add-card-button-${column.id}`}
+        >
+          <Plus className="w-3.5 h-3.5 text-amber-600" />
+          <span>+ Add Card</span>
+        </button>
+      );
+    }
+    if (themeVariant === "brutal") {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-none border-2 border-black dark:border-white bg-yellow-400 text-black text-xs font-mono font-black uppercase hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#fff] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+          data-testid={`add-card-button-${column.id}`}
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>+ ADD BLOCK</span>
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setIsAddModalOpen(true)}
+        className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[#ff007f]/40 bg-[#ff007f]/10 text-xs font-mono font-bold tracking-wider text-[#ff007f] hover:bg-[#ff007f] hover:text-white hover:shadow-[0_0_16px_rgba(255,0,127,0.5)] transition-all duration-200 cursor-pointer active:scale-[0.99]"
+        data-testid={`add-card-button-${column.id}`}
+      >
+        <Plus className="w-3.5 h-3.5" />
+        <span>+ ADD CARD</span>
+      </button>
+    );
+  };
+
+  const renderEmptySlot = () => {
+    if (themeVariant === "office") {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-md bg-white/40 dark:bg-slate-900/30">
+          <p className="font-sans text-xs text-slate-400">No tasks in this column</p>
+        </div>
+      );
+    }
+    if (themeVariant === "cozy") {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-amber-200/80 dark:border-stone-800 rounded-2xl bg-amber-50/20 dark:bg-stone-900/20">
+          <p className="text-xs text-amber-800/60 dark:text-stone-400">A calm space for thoughts</p>
+        </div>
+      );
+    }
+    if (themeVariant === "brutal") {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-black dark:border-white rounded-none bg-yellow-400/10">
+          <p className="font-mono font-black text-xs uppercase text-black dark:text-white">[ EMPTY LANE ]</p>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-[#00f0ff]/15 rounded-lg bg-[#0a0e1a]/30">
+        <p className="font-mono text-[11px] tracking-widest text-[#94a3b8]/50">
+          [ SECURE SLOT EMPTY ]
+        </p>
+        <span className="font-mono text-[10px] text-[#94a3b8]/30 mt-1">
+          DROP UNITS OR ADD NEW
+        </span>
+      </div>
+    );
+  };
 
   useEffect(() => {
     setTitleInput(column.title);
@@ -114,18 +229,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   return (
     <>
       <div
-        className={`flex flex-col ${
-          isGridMode ? "w-full min-w-0 max-w-none" : "w-80 min-w-80 max-w-80"
-        } rounded-xl border ${theme.border} bg-[#121829]/95 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] flex-shrink-0 max-h-[calc(100vh-160px)] transition-all duration-200 overflow-hidden relative group`}
+        className={`flex flex-col ${getColumnClasses()} flex-shrink-0 max-h-[calc(100vh-160px)] transition-all duration-200 overflow-hidden relative group`}
         data-testid={`column-${column.id}`}
       >
-        {/* Top glowing neon accent line */}
-        <div
-          className={`h-[3px] w-full bg-gradient-to-r ${theme.topGradient}`}
-        />
+        {/* Top accent bar */}
+        {renderTopBar()}
 
         {/* Column Header */}
-        <div className="p-4 border-b border-[#00f0ff]/15 bg-[#0a0e1a]/60 flex items-center justify-between gap-2">
+        <div className="p-4 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/60 flex items-center justify-between gap-2">
           {isEditingTitle ? (
             <div className="flex items-center gap-1.5 flex-1">
               <input
@@ -246,35 +357,19 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   columnId={column.id}
                   onDelete={onDeleteCard}
                   onEdit={onEditCard}
+                  themeVariant={themeVariant}
                 />
               ))}
               {provided.placeholder}
 
-              {column.cards.length === 0 && !snapshot.isDraggingOver && (
-                <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-[#00f0ff]/15 rounded-lg bg-[#0a0e1a]/30">
-                  <p className="font-mono text-[11px] tracking-widest text-[#94a3b8]/50">
-                    [ SECURE SLOT EMPTY ]
-                  </p>
-                  <span className="font-mono text-[10px] text-[#94a3b8]/30 mt-1">
-                    DROP UNITS OR ADD NEW
-                  </span>
-                </div>
-              )}
+              {column.cards.length === 0 && !snapshot.isDraggingOver && renderEmptySlot()}
             </div>
           )}
         </Droppable>
 
         {/* Add Card Action Button */}
-        <div className="p-3 border-t border-[#00f0ff]/15 bg-[#0a0e1a]/60">
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[#ff007f]/40 bg-[#ff007f]/10 text-xs font-mono font-bold tracking-wider text-[#ff007f] hover:bg-[#ff007f] hover:text-white hover:shadow-[0_0_16px_rgba(255,0,127,0.5)] transition-all duration-200 cursor-pointer active:scale-[0.99]"
-            data-testid={`add-card-button-${column.id}`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ ADD CARD</span>
-          </button>
+        <div className="p-3 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/60">
+          {renderAddButton()}
         </div>
       </div>
 

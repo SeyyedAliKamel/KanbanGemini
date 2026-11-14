@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, LayoutGrid, AlertTriangle } from "lucide-react";
+import { Plus, LayoutGrid, AlertTriangle, Palette } from "lucide-react";
 import { INITIAL_COLUMNS } from "@/data/initialData";
 import { Column, Card, GridSettings, ColumnsLayout } from "@/types/kanban";
+import { ThemeConfig, DEFAULT_THEME_CONFIG } from "@/types/theme";
 import { Language, translations } from "@/data/translations";
 import { KanbanColumn } from "./KanbanColumn";
 import { Header } from "./Header";
 import { GridSettingsModal } from "./GridSettingsModal";
 import { AuthModal } from "./AuthModal";
 import { AIChatSidebar } from "./AIChatSidebar";
+import { ThemeModal } from "./ThemeModal";
 import {
   fetchBoard,
   apiCreateColumn,
@@ -44,6 +46,40 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   const [authChecked, setAuthChecked] = useState(initialUser !== undefined);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>(DEFAULT_THEME_CONFIG);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+
+  // Load theme from localStorage on client mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kanban_theme_config");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.variant && parsed.mode) {
+          setThemeConfig(parsed);
+        }
+      }
+    } catch {
+      // Ignore storage error
+    }
+  }, []);
+
+  // Sync theme attributes to documentElement
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", themeConfig.variant);
+      document.documentElement.setAttribute("data-mode", themeConfig.mode);
+    }
+  }, [themeConfig]);
+
+  const handleUpdateTheme = (newConfig: ThemeConfig) => {
+    setThemeConfig(newConfig);
+    try {
+      localStorage.setItem("kanban_theme_config", JSON.stringify(newConfig));
+    } catch {
+      // Ignore storage error
+    }
+  };
 
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "en" ? "fa" : "en"));
@@ -258,7 +294,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
     setGridSettings((prev) => ({ ...prev, columnsPerRow: layout }));
   };
 
-  // Dynamic visual grid styling
+  // Dynamic visual grid styling per theme and mode
   const gridColorMap = {
     cyan: "0, 240, 255",
     magenta: "255, 0, 127",
@@ -266,9 +302,70 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   };
   const rgb = gridColorMap[gridSettings.color];
 
-  const gridStyle: React.CSSProperties = gridSettings.visible
-    ? {
-        backgroundColor: "#0a0e1a",
+  const getGridStyle = (): React.CSSProperties => {
+    const isDark = themeConfig.mode === "dark";
+
+    if (themeConfig.variant === "office") {
+      const bg = isDark ? "#0f172a" : "#f8fafc";
+      if (!gridSettings.visible) {
+        return { backgroundColor: bg };
+      }
+      const lineColor = isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.04)";
+      return {
+        backgroundColor: bg,
+        backgroundImage: `
+          linear-gradient(to right, ${lineColor} 1px, transparent 1px),
+          linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)
+        `,
+        backgroundSize: `${gridSettings.size}px ${gridSettings.size}px`,
+      };
+    }
+
+    if (themeConfig.variant === "cozy") {
+      const bg = isDark ? "#1c1917" : "#faf6f0";
+      const vignette = isDark
+        ? "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, 0.08), transparent)"
+        : "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(217, 119, 6, 0.05), transparent)";
+      if (!gridSettings.visible) {
+        return {
+          backgroundColor: bg,
+          backgroundImage: vignette,
+          backgroundSize: "100% 100%",
+        };
+      }
+      const warmLine = isDark ? "rgba(245, 158, 11, 0.04)" : "rgba(180, 83, 9, 0.035)";
+      return {
+        backgroundColor: bg,
+        backgroundImage: `
+          ${vignette},
+          linear-gradient(to right, ${warmLine} 1px, transparent 1px),
+          linear-gradient(to bottom, ${warmLine} 1px, transparent 1px)
+        `,
+        backgroundSize: `100% 100%, ${gridSettings.size}px ${gridSettings.size}px, ${gridSettings.size}px ${gridSettings.size}px`,
+      };
+    }
+
+    if (themeConfig.variant === "brutal") {
+      const bg = isDark ? "#0d0d0d" : "#fffdf5";
+      const dotColor = isDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)";
+      if (!gridSettings.visible) {
+        return { backgroundColor: bg };
+      }
+      return {
+        backgroundColor: bg,
+        backgroundImage: `radial-gradient(circle, ${dotColor} 1.5px, transparent 1.5px)`,
+        backgroundSize: `24px 24px`,
+      };
+    }
+
+    // Default Cyberpunk
+    const bg = isDark ? "#0a0e1a" : "#e5edf5";
+    if (!gridSettings.visible) {
+      return { backgroundColor: bg };
+    }
+    if (isDark) {
+      return {
+        backgroundColor: bg,
         backgroundImage: `
           radial-gradient(ellipse 80% 50% at 50% -20%, rgba(${rgb}, 0.15), transparent),
           radial-gradient(ellipse 60% 40% at 90% 80%, rgba(255, 0, 127, 0.08), transparent),
@@ -277,10 +374,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
           linear-gradient(to bottom, rgba(${rgb}, ${gridSettings.opacity}) 1px, transparent 1px)
         `,
         backgroundSize: `100% 100%, 100% 100%, 100% 100%, ${gridSettings.size}px ${gridSettings.size}px, ${gridSettings.size}px ${gridSettings.size}px`,
-      }
-    : {
-        backgroundColor: "#0a0e1a",
       };
+    }
+    return {
+      backgroundColor: bg,
+      backgroundImage: `
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(2, 132, 199, 0.1), transparent),
+        linear-gradient(to right, rgba(2, 132, 199, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(2, 132, 199, 0.08) 1px, transparent 1px)
+      `,
+      backgroundSize: `100% 100%, ${gridSettings.size}px ${gridSettings.size}px, ${gridSettings.size}px ${gridSettings.size}px`,
+    };
+  };
 
   const getBoardLayoutClass = () => {
     switch (gridSettings.columnsPerRow) {
@@ -298,6 +403,75 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
       default:
         return "flex items-start gap-6 pb-8 min-w-max justify-start";
     }
+  };
+
+  const getSubHeaderClass = () => {
+    if (themeConfig.variant === "office") {
+      return "border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-6 py-2.5 backdrop-blur-sm text-slate-600 dark:text-slate-300 font-sans";
+    }
+    if (themeConfig.variant === "cozy") {
+      return "border-b border-amber-200/50 dark:border-stone-800 bg-[#f5eee4]/90 dark:bg-[#1a1715]/90 px-6 py-2.5 backdrop-blur-sm text-amber-900/80 dark:text-amber-200/80 font-sans";
+    }
+    if (themeConfig.variant === "brutal") {
+      return "border-b-2 border-black dark:border-white bg-yellow-300 dark:bg-[#1a1a1a] px-6 py-2.5 text-black dark:text-yellow-400 font-mono font-black uppercase text-xs shadow-[0px_2px_0px_#000] dark:shadow-[0px_2px_0px_#fff]";
+    }
+    return "border-b border-[#00f0ff]/10 bg-[#0a0e1a]/70 px-6 py-2.5 backdrop-blur-sm font-mono text-[#94a3b8]";
+  };
+
+  const getSubHeaderPillClass = () => {
+    if (themeConfig.variant === "office") {
+      return "hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-sans transition-all cursor-pointer shadow-xs";
+    }
+    if (themeConfig.variant === "cozy") {
+      return "hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-300/60 dark:border-stone-700 bg-amber-100/60 dark:bg-stone-800 text-amber-900 dark:text-amber-200 hover:bg-amber-200/60 dark:hover:bg-stone-700 text-xs font-sans transition-all cursor-pointer shadow-xs";
+    }
+    if (themeConfig.variant === "brutal") {
+      return "hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-none border-2 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 text-xs font-mono font-black uppercase shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#fff] transition-all cursor-pointer";
+    }
+    return "hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded border border-[#ecad0a]/30 bg-[#121829] hover:bg-[#ecad0a]/10 text-[#ecad0a] transition-all cursor-pointer text-[10px] font-mono";
+  };
+
+  const getRowSwitcherContainerClass = () => {
+    if (themeConfig.variant === "office") {
+      return "flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 font-sans text-xs";
+    }
+    if (themeConfig.variant === "cozy") {
+      return "flex items-center gap-1.5 bg-amber-100/50 dark:bg-stone-800 px-2.5 py-1 rounded-full border border-amber-200/80 dark:border-stone-700 font-sans text-xs";
+    }
+    if (themeConfig.variant === "brutal") {
+      return "flex items-center gap-1.5 bg-white dark:bg-[#121212] px-2 py-1 rounded-none border-2 border-black dark:border-white font-mono font-black shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#fff] text-xs";
+    }
+    return "flex items-center gap-1.5 bg-[#121829] px-2 py-1 rounded border border-[#00f0ff]/20 font-mono text-[10px]";
+  };
+
+  const getRowSwitcherButtonClass = (layout: ColumnsLayout) => {
+    const isActive = gridSettings.columnsPerRow === layout;
+    if (themeConfig.variant === "office") {
+      return `px-2 py-0.5 rounded text-xs font-sans font-medium transition-all cursor-pointer ${
+        isActive
+          ? "bg-blue-600 text-white shadow-xs"
+          : "text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+      }`;
+    }
+    if (themeConfig.variant === "cozy") {
+      return `px-2.5 py-0.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
+        isActive
+          ? "bg-amber-600 text-white shadow-xs"
+          : "text-amber-900/80 dark:text-amber-200/80 hover:bg-amber-200/60 dark:hover:bg-stone-700"
+      }`;
+    }
+    if (themeConfig.variant === "brutal") {
+      return `px-2 py-0.5 rounded-none text-xs font-mono font-black uppercase transition-all cursor-pointer ${
+        isActive
+          ? "bg-black text-white dark:bg-yellow-400 dark:text-black border border-black dark:border-white"
+          : "text-black dark:text-white hover:bg-yellow-200 dark:hover:bg-stone-800"
+      }`;
+    }
+    return `px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
+      isActive
+        ? "bg-[#00f0ff] text-[#0a0e1a]"
+        : "text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#00f0ff]/10"
+    }`;
   };
 
   if (!isMounted || !authChecked) {
@@ -327,20 +501,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   return (
     <div
       className="min-h-screen flex flex-col text-[#f1f5f9] transition-all duration-300 relative"
-      style={gridStyle}
+      style={getGridStyle()}
       dir={language === "fa" ? "rtl" : "ltr"}
       data-testid="kanban-app-container"
+      data-theme={themeConfig.variant}
+      data-mode={themeConfig.mode}
     >
       <Header
         totalCards={totalCards}
         columnCount={columns.length}
         language={language}
         currentUser={currentUser}
+        themeVariant={themeConfig.variant}
         isAIChatOpen={isAIChatOpen}
         onToggleAIChat={() => setIsAIChatOpen((prev) => !prev)}
         onToggleLanguage={toggleLanguage}
         onLogout={handleLogout}
         onOpenGridSettings={() => setIsGridModalOpen(true)}
+        onOpenThemeSettings={() => setIsThemeModalOpen(true)}
       />
 
       {/* Sync Error Notification Banner */}
@@ -370,36 +548,51 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
       {/* Main Board View with blur when unauthenticated */}
       <div className={`flex-1 flex flex-col ${!currentUser ? "filter blur-[6px] pointer-events-none select-none" : ""}`}>
         {/* Sub-header status & layout toolbar */}
-        <div className="border-b border-[#00f0ff]/10 bg-[#0a0e1a]/70 px-6 py-2.5 backdrop-blur-sm">
-          <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#94a3b8]">
+        <div className={getSubHeaderClass()}>
+          <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-[#00f0ff]/80 font-semibold tracking-wider">
-                [ SYSTEM ACTIVE ]
+              <span className="font-semibold tracking-wider">
+                {themeConfig.variant === "office"
+                  ? "WORKSPACE ACTIVE"
+                  : themeConfig.variant === "cozy"
+                  ? "FOCUS MODE"
+                  : themeConfig.variant === "brutal"
+                  ? "[LIVE_BOARD]"
+                  : "[ SYSTEM ACTIVE ]"}
               </span>
-              <span className="hidden md:inline text-[#94a3b8]/40">//</span>
+              <span className="hidden md:inline opacity-40">//</span>
               <span className="hidden md:inline">
-                LANES: <span className="text-[#f1f5f9]">{columns.length}</span>
+                LANES: <span className="font-bold">{columns.length}</span>
               </span>
-              <span className="hidden md:inline text-[#94a3b8]/40">//</span>
+              <span className="hidden md:inline opacity-40">//</span>
               <span className="hidden md:inline" data-testid="grid-status-info">
-                GRID: <span className="text-[#00f0ff]">{gridSettings.visible ? `${gridSettings.size}PX ${gridSettings.color.toUpperCase()}` : "INACTIVE"}</span>
+                GRID: <span className="font-bold">{gridSettings.visible ? `${gridSettings.size}PX ${gridSettings.color.toUpperCase()}` : "INACTIVE"}</span>
               </span>
 
+              {/* Theme Tab Pill */}
+              <span className="hidden md:inline opacity-40">//</span>
+              <button
+                type="button"
+                onClick={() => setIsThemeModalOpen(true)}
+                className={getSubHeaderPillClass()}
+                data-testid="sub-theme-tab-btn"
+                title={t.themeCustomizer}
+              >
+                <Palette className="w-3.5 h-3.5" />
+                <span>THEME: <strong>{themeConfig.variant.toUpperCase()}</strong> ({themeConfig.mode.toUpperCase()})</span>
+              </button>
+
               {/* Quick Columns Per Row Switcher */}
-              <div className="flex items-center gap-1.5 bg-[#121829] px-2 py-1 rounded border border-[#00f0ff]/20">
-                <LayoutGrid className="w-3 h-3 text-[#00f0ff]" />
-                <span className="text-[#94a3b8]">ROW:</span>
+              <div className={getRowSwitcherContainerClass()}>
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="opacity-75">ROW:</span>
                 {(["scroll", "2", "3", "4", "5", "fit"] as ColumnsLayout[]).map(
                   (layout) => (
                     <button
                       key={layout}
                       type="button"
                       onClick={() => handleLayoutChange(layout)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
-                        gridSettings.columnsPerRow === layout
-                          ? "bg-[#00f0ff] text-[#0a0e1a]"
-                          : "text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#00f0ff]/10"
-                      }`}
+                      className={getRowSwitcherButtonClass(layout)}
                       data-testid={`layout-btn-${layout}`}
                     >
                       {layout.toUpperCase()}
@@ -410,8 +603,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[#00f0ff]/60 tracking-wider">
-                PROTOCOL: REALTIME_PANGEA_DND
+              <span className="opacity-70 tracking-wider">
+                {themeConfig.variant === "brutal"
+                  ? "DRAG_N_DROP: ACTIVE"
+                  : themeConfig.variant === "office"
+                  ? "Real-time Workspace"
+                  : "PROTOCOL: REALTIME_PANGEA_DND"}
               </span>
             </div>
           </div>
@@ -450,6 +647,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
                             onDeleteColumn={handleDeleteColumn}
                             columnDragHandleProps={columnProvided.dragHandleProps}
                             isGridMode={isGridMode}
+                            themeVariant={themeConfig.variant}
                           />
                         </div>
                       )}
@@ -466,11 +664,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
                     <button
                       type="button"
                       onClick={handleAddColumn}
-                      className="w-full h-full min-h-32 rounded-xl border-2 border-dashed border-[#00f0ff]/30 hover:border-[#00f0ff] bg-[#121829]/40 hover:bg-[#00f0ff]/10 text-xs font-mono font-bold tracking-widest text-[#00f0ff] hover:shadow-[0_0_20px_rgba(0,240,255,0.25)] flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group p-4"
+                      className={`w-full h-full min-h-32 border-2 border-dashed flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group p-4 ${
+                        themeConfig.variant === "office"
+                          ? "rounded-lg border-slate-300 hover:border-blue-500 bg-white/40 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 font-sans text-xs font-semibold hover:shadow-xs"
+                          : themeConfig.variant === "cozy"
+                          ? "rounded-3xl border-amber-300/80 hover:border-amber-500 bg-amber-50/20 dark:bg-stone-900/20 text-amber-800 dark:text-amber-200 text-xs font-semibold hover:shadow-sm"
+                          : themeConfig.variant === "brutal"
+                          ? "rounded-none border-2 border-dashed border-black dark:border-white bg-yellow-400/20 hover:bg-yellow-400 text-black dark:text-white hover:text-black font-mono font-black text-xs uppercase shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#fff]"
+                          : "rounded-xl border-[#00f0ff]/30 hover:border-[#00f0ff] bg-[#121829]/40 hover:bg-[#00f0ff]/10 text-xs font-mono font-bold tracking-widest text-[#00f0ff] hover:shadow-[0_0_20px_rgba(0,240,255,0.25)]"
+                      }`}
                       data-testid="add-column-button"
                     >
-                      <div className="w-8 h-8 rounded-full border border-[#00f0ff]/40 bg-[#0a0e1a] flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Plus className="w-4 h-4 text-[#00f0ff]" />
+                      <div className="w-8 h-8 rounded-full border border-current/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus className="w-4 h-4 text-current" />
                       </div>
                       <span>+ ADD NEW LANE</span>
                     </button>
@@ -491,6 +697,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
         }
         onClose={() => setIsGridModalOpen(false)}
         onReset={() => setGridSettings(DEFAULT_GRID_SETTINGS)}
+      />
+
+      {/* Theme Customizer Modal */}
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        themeConfig={themeConfig}
+        language={language}
+        onUpdateTheme={handleUpdateTheme}
+        onClose={() => setIsThemeModalOpen(false)}
       />
 
       {/* AI Copilot Sidebar */}

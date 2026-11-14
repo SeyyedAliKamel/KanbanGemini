@@ -46,6 +46,37 @@ export interface Translations {
   aiAppliedBadge: string;
   aiToggleBtn: string;
   aiClearChat: string;
+  themeTab: string;
+  themeCustomizer: string;
+  themeCustomizerSub: string;
+  colorMode: string;
+  darkMode: string;
+  lightMode: string;
+  themeStyle: string;
+  themeCyberpunk: string;
+  themeCyberpunkDesc: string;
+  themeOffice: string;
+  themeOfficeDesc: string;
+  themeCozy: string;
+  themeCozyDesc: string;
+  themeBrutal: string;
+  themeBrutalDesc: string;
+  activeTheme: string;
+  officeTitle: string;
+  officeSubtitle: string;
+  officeStatus: string;
+  officeLanes: string;
+  officeTasks: string;
+  cozyTitle: string;
+  cozySubtitle: string;
+  cozyStatus: string;
+  cozyLanes: string;
+  cozyTasks: string;
+  brutalTitle: string;
+  brutalSubtitle: string;
+  brutalStatus: string;
+  brutalLanes: string;
+  brutalTasks: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -95,6 +126,37 @@ export const translations: Record<Language, Translations> = {
     aiAppliedBadge: "actions executed on board",
     aiToggleBtn: "AI COPILOT",
     aiClearChat: "RESET",
+    themeTab: "THEME",
+    themeCustomizer: "THEME CUSTOMIZER",
+    themeCustomizerSub: "Select visual atmosphere and color mode",
+    colorMode: "COLOR MODE",
+    darkMode: "Dark Mode",
+    lightMode: "Light Mode",
+    themeStyle: "THEME STYLE",
+    themeCyberpunk: "Cyberpunk",
+    themeCyberpunkDesc: "Futuristic neon glows, dark matrix atmosphere, and monospace accents",
+    themeOffice: "Office",
+    themeOfficeDesc: "Crisp corporate minimalism, executive blue slate, and clean borders",
+    themeCozy: "Cozy",
+    themeCozyDesc: "Warm terracotta and amber tones, pillowy rounded edges, and soothing atmosphere",
+    themeBrutal: "Brutal",
+    themeBrutalDesc: "Bold Neo-Brutalism, thick borders, acid accents, and hard block shadows",
+    activeTheme: "ACTIVE THEME:",
+    officeTitle: "WORKSPACE",
+    officeSubtitle: "Enterprise Project Board",
+    officeStatus: "Connected",
+    officeLanes: "Columns active",
+    officeTasks: "TOTAL TASKS:",
+    cozyTitle: "COZY FLOW",
+    cozySubtitle: "Daily tasks & gentle focus",
+    cozyStatus: "In Flow",
+    cozyLanes: "Gentle lanes",
+    cozyTasks: "FLOW ITEMS:",
+    brutalTitle: "BRUTAL",
+    brutalSubtitle: "RAW KANBAN // DO WORK",
+    brutalStatus: "RAW_OK",
+    brutalLanes: "BLOCK LANES",
+    brutalTasks: "BLOCKS:",
   },
   fa: {
     cyberTitle: "سایبر",
@@ -142,5 +204,36 @@ export const translations: Record<Language, Translations> = {
     aiAppliedBadge: "عملیات روی برد اعمال شد",
     aiToggleBtn: "دستیار هوشمند",
     aiClearChat: "پاک‌سازی",
+    themeTab: "پوسته",
+    themeCustomizer: "تنظیمات پوسته و ظاهر",
+    themeCustomizerSub: "انتخاب سبک بصری و حالت شب / روز",
+    colorMode: "حالت رنگی",
+    darkMode: "حالت تیره",
+    lightMode: "حالت روشن",
+    themeStyle: "سبک پوسته",
+    themeCyberpunk: "سایبرپانک",
+    themeCyberpunkDesc: "نئون‌های آینده‌نگرانه، فضای ماتریکس تیره و تایپوگرافی مونو",
+    themeOffice: "اداری (Office)",
+    themeOfficeDesc: "مینیمالیسم شرکتی، رنگ‌های سرمه‌ای ملایم و خطوط شفاف رسمی",
+    themeCozy: "دنج و گرم (Cozy)",
+    themeCozyDesc: "رنگ‌های گرم خاکی و کهربایی، لبه‌های کاملاً گرد و حس آرامش",
+    themeBrutal: "بروتال (Brutal)",
+    themeBrutalDesc: "نئو-بروتالیسم با کادرهای مشکی ضخیم، کنتراست بالا و سایه‌های تخت",
+    activeTheme: "پوستهٔ فعال:",
+    officeTitle: "میزکار شرکتی",
+    officeSubtitle: "تختهٔ مدیریت وظایف سازمانی",
+    officeStatus: "فعال",
+    officeLanes: "ستون فعال",
+    officeTasks: "وظایف فعال:",
+    cozyTitle: "جریان دنج",
+    cozySubtitle: "یادداشت‌ها و کارهای روزانه",
+    cozyStatus: "آرام",
+    cozyLanes: "بخش آرام",
+    cozyTasks: "کارهای جاری:",
+    brutalTitle: "بروتال",
+    brutalSubtitle: "ساده و پرقدرت // بدون تعارف",
+    brutalStatus: "آماده",
+    brutalLanes: "ستون سخت",
+    brutalTasks: "بسته‌ها:",
   },
 };
