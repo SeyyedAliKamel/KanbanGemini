@@ -6,6 +6,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.auth import router as auth_router, require_authenticated_user
+from backend.app.routers.board import router as board_router
+from backend.app.database import init_db
+
+# Initialize database on startup
+init_db()
 
 app = FastAPI(title="Kanban Project Management MVP API", version="0.1.0")
 
@@ -18,8 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Authentication Router
+# Include Authentication & Board Routers
 app.include_router(auth_router)
+app.include_router(board_router)
 
 # Test/Health API Route
 @app.get("/api/health")
