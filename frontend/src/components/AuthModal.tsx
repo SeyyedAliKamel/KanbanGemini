@@ -37,12 +37,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (!response.ok) {
+        // If backend API is not present (e.g. static hosting on GitHub Pages), allow standard user/password
+        if (response.status === 404 && username === "user" && password === "password") {
+          onSuccess(username);
+          return;
+        }
         throw new Error(t.invalidCredentials);
       }
 
       const data = await response.json();
       onSuccess(data.user?.username || username);
     } catch (err: unknown) {
+      // Offline fallback for static demo hosting
+      if (username === "user" && password === "password") {
+        onSuccess(username);
+        return;
+      }
       if (err instanceof Error) {
         setError(err.message);
       } else {

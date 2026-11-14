@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: kanban-app
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: DATABASE_PATH
+        value: /data/kanban.db
+    disk:
+      name: kanban-data
+      mountPath: /data
+      sizeGB: 1

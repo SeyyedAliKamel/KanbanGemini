@@ -7,7 +7,11 @@ from typing import Optional
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent.parent / "kanban.db"
 
 def get_db_path() -> str:
-    return os.environ.get("DATABASE_PATH", str(DEFAULT_DB_PATH))
+    if "DATABASE_PATH" in os.environ:
+        return os.environ["DATABASE_PATH"]
+    if os.environ.get("VERCEL"):
+        return "/tmp/kanban.db"
+    return str(DEFAULT_DB_PATH)
 
 def get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     path = db_path or get_db_path()
