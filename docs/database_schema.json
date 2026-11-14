@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kanban Database Relational Schema",
+  "version": "1.0.0",
+  "engine": "SQLite3",
+  "tables": [
+    {
+      "name": "users",
+      "description": "Multi-user authentication and identity table",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "description": "Unique user ID (e.g. usr_admin)"
+        },
+        {
+          "name": "username",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "unique": true,
+          "description": "Unique login username"
+        },
+        {
+          "name": "password_hash",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "Hashed password or stored credential string"
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "ISO 8601 UTC timestamp of creation"
+        }
+      ]
+    },
+    {
+      "name": "boards",
+      "description": "Kanban boards belonging to users (1 board per user in MVP, scalable to many)",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "description": "Unique board ID (e.g. brd_user_default)"
+        },
+        {
+          "name": "user_id",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "unique": true,
+          "foreign_key": {
+            "table": "users",
+            "column": "id",
+            "on_delete": "CASCADE"
+          },
+          "description": "Owner user foreign key reference"
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "Board title"
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "ISO 8601 UTC timestamp"
+        }
+      ]
+    },
+    {
+      "name": "columns",
+      "description": "Lanes / columns contained within a board",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "description": "Unique column ID matching frontend string format (e.g. col-1, col-2)"
+        },
+        {
+          "name": "board_id",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "foreign_key": {
+            "table": "boards",
+            "column": "id",
+            "on_delete": "CASCADE"
+          },
+          "description": "Parent board foreign key reference"
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "Display title of the column"
+        },
+        {
+          "name": "position",
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "description": "0-based ordering index of the column within the board"
+        }
+      ]
+    },
+    {
+      "name": "cards",
+      "description": "Kanban cards / units contained within a column",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "description": "Unique card ID matching frontend string format (e.g. card-1, card-2)"
+        },
+        {
+          "name": "column_id",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "foreign_key": {
+            "table": "columns",
+            "column": "id",
+            "on_delete": "CASCADE"
+          },
+          "description": "Parent column foreign key reference"
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "Task card title"
+        },
+        {
+          "name": "details",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": "''",
+          "description": "Detailed description / specifications of the card"
+        },
+        {
+          "name": "position",
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "description": "0-based ordering index of the card within its column"
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "ISO 8601 UTC timestamp of creation"
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "description": "ISO 8601 UTC timestamp of latest update"
+        }
+      ]
+    }
+  ]
+}
