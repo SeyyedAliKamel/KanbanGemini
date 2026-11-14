@@ -26,6 +26,15 @@ export interface Translations {
   gridColor: string;
   close: string;
   languageToggle: string;
+  loginTitle: string;
+  loginSubtitle: string;
+  username: string;
+  password: string;
+  loginBtn: string;
+  loggingIn: string;
+  invalidCredentials: string;
+  logout: string;
+  userBadge: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -55,6 +64,15 @@ export const translations: Record<Language, Translations> = {
     gridColor: "Accent Color",
     close: "Close",
     languageToggle: "فارسی",
+    loginTitle: "ACCESS AUTHORIZATION",
+    loginSubtitle: "Sign in with user / password to unlock the workspace",
+    username: "Username",
+    password: "Password",
+    loginBtn: "AUTHENTICATE",
+    loggingIn: "VERIFYING CREDENTIALS...",
+    invalidCredentials: "Invalid credentials. Use user / password.",
+    logout: "LOGOUT",
+    userBadge: "OPERATOR:",
   },
   fa: {
     cyberTitle: "سایبر",
@@ -82,5 +100,14 @@ export const translations: Record<Language, Translations> = {
     gridColor: "رنگ تأکیدی",
     close: "بستن",
     languageToggle: "English",
+    loginTitle: "احراز هویت کاربر",
+    loginSubtitle: "جهت دسترسی به تخته با user / password وارد شوید",
+    username: "نام کاربری",
+    password: "رمز عبور",
+    loginBtn: "ورود به سیستم",
+    loggingIn: "در حال بررسی اعتبارنامه...",
+    invalidCredentials: "نام کاربری یا رمز عبور اشتباه است.",
+    logout: "خروج",
+    userBadge: "کاربر:",
   },
 };

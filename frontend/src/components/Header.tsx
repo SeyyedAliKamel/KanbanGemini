@@ -1,14 +1,16 @@
 "use client";
 
 import React from "react";
-import { Terminal, Activity, Layers, Sliders, Languages } from "lucide-react";
+import { Terminal, Activity, Layers, Sliders, Languages, LogOut, UserCheck } from "lucide-react";
 import { Language, translations } from "@/data/translations";
 
 interface HeaderProps {
   totalCards: number;
   columnCount: number;
   language: Language;
+  currentUser: string | null;
   onToggleLanguage: () => void;
+  onLogout: () => void;
   onOpenGridSettings: () => void;
 }
 
@@ -16,7 +18,9 @@ export const Header: React.FC<HeaderProps> = ({
   totalCards,
   columnCount,
   language,
+  currentUser,
   onToggleLanguage,
+  onLogout,
   onOpenGridSettings,
 }) => {
   const t = translations[language];
@@ -60,6 +64,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Telemetry info HUD & Controls */}
         <div className="flex items-center gap-3">
+          {/* User Badge if authenticated */}
+          {currentUser && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#753991]/50 bg-[#121829] font-mono text-xs text-[#f1f5f9]"
+              data-testid="current-user-badge"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-[#ecad0a]" />
+              <span className="text-[#94a3b8]">{t.userBadge}</span>
+              <span className="text-[#ecad0a] font-bold">{currentUser}</span>
+            </div>
+          )}
+
           {/* Language Toggle Button */}
           <button
             type="button"
@@ -102,6 +118,20 @@ export const Header: React.FC<HeaderProps> = ({
               {totalCards}
             </span>
           </div>
+
+          {/* Logout Button if authenticated */}
+          {currentUser && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ff007f]/40 bg-[#121829] text-xs font-mono font-semibold text-[#ff007f] hover:bg-[#ff007f]/15 hover:shadow-[0_0_12px_rgba(255,0,127,0.4)] transition-all cursor-pointer"
+              data-testid="logout-btn"
+              title="Logout from session"
+            >
+              <LogOut className="w-3.5 h-3.5 text-[#ff007f]" />
+              <span className="hidden sm:inline">{t.logout}</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

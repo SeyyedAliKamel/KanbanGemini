@@ -9,6 +9,7 @@ import { Language, translations } from "@/data/translations";
 import { KanbanColumn } from "./KanbanColumn";
 import { Header } from "./Header";
 import { GridSettingsModal } from "./GridSettingsModal";
+import { AuthModal } from "./AuthModal";
 
 const DEFAULT_GRID_SETTINGS: GridSettings = {
   visible: true,
@@ -18,12 +19,18 @@ const DEFAULT_GRID_SETTINGS: GridSettings = {
   columnsPerRow: "scroll",
 };
 
-export const KanbanBoard: React.FC = () => {
+interface KanbanBoardProps {
+  initialUser?: string | null;
+}
+
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialUser }) => {
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
   const [gridSettings, setGridSettings] = useState<GridSettings>(DEFAULT_GRID_SETTINGS);
   const [isGridModalOpen, setIsGridModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [language, setLanguage] = useState<Language>("en");
+  const [currentUser, setCurrentUser] = useState<string | null>(initialUser ?? null);
+  const [authChecked, setAuthChecked] = useState(initialUser !== undefined);
 
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "en" ? "fa" : "en"));
@@ -33,7 +40,31 @@ export const KanbanBoard: React.FC = () => {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    if (initialUser !== undefined) {
+      setAuthChecked(true);
+      return;
+    }
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user.username);
+        } else {
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => setCurrentUser(null))
+      .finally(() => setAuthChecked(true));
+  }, [initialUser]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+  };
 
   const totalCards = columns.reduce((acc, col) => acc + col.cards.length, 0);
   const isGridMode = gridSettings.columnsPerRow !== "scroll";
@@ -214,14 +245,16 @@ export const KanbanBoard: React.FC = () => {
     }
   };
 
-  if (!isMounted) {
+  if (!isMounted || !authChecked) {
     return (
       <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-[#f1f5f9]" dir={language === "fa" ? "rtl" : "ltr"}>
         <Header
           totalCards={INITIAL_COLUMNS.reduce((a, c) => a + c.cards.length, 0)}
           columnCount={INITIAL_COLUMNS.length}
           language={language}
+          currentUser={currentUser}
           onToggleLanguage={toggleLanguage}
+          onLogout={handleLogout}
           onOpenGridSettings={() => {}}
         />
         <main className="flex-1 p-8 flex items-center justify-center">
@@ -238,7 +271,7 @@ export const KanbanBoard: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col text-[#f1f5f9] transition-all duration-300"
+      className="min-h-screen flex flex-col text-[#f1f5f9] transition-all duration-300 relative"
       style={gridStyle}
       dir={language === "fa" ? "rtl" : "ltr"}
       data-testid="kanban-app-container"
@@ -247,11 +280,22 @@ export const KanbanBoard: React.FC = () => {
         totalCards={totalCards}
         columnCount={columns.length}
         language={language}
+        currentUser={currentUser}
         onToggleLanguage={toggleLanguage}
+        onLogout={handleLogout}
         onOpenGridSettings={() => setIsGridModalOpen(true)}
       />
 
-      {/* Sub-header status & layout toolbar */}
+      {/* Auth Modal Overlay when not authenticated */}
+      <AuthModal
+        isOpen={!currentUser}
+        language={language}
+        onSuccess={(username) => setCurrentUser(username)}
+      />
+
+      {/* Main Board View with blur when unauthenticated */}
+      <div className={`flex-1 flex flex-col ${!currentUser ? "filter blur-[6px] pointer-events-none select-none" : ""}`}>
+        {/* Sub-header status & layout toolbar */}
       <div className="border-b border-[#00f0ff]/10 bg-[#0a0e1a]/70 px-6 py-2.5 backdrop-blur-sm">
         <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#94a3b8]">
           <div className="flex items-center gap-4 flex-wrap">
@@ -391,6 +435,7 @@ export const KanbanBoard: React.FC = () => {
           </Droppable>
         </DragDropContext>
       </main>
+      </div>
 
       {/* Grid Settings HUD Modal */}
       <GridSettingsModal

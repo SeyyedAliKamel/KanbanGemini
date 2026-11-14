@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+from backend.app.auth import router as auth_router, require_authenticated_user
 
 app = FastAPI(title="Kanban Project Management MVP API", version="0.1.0")
 
@@ -16,6 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include Authentication Router
+app.include_router(auth_router)
+
 # Test/Health API Route
 @app.get("/api/health")
 async def health_check():
@@ -23,6 +28,14 @@ async def health_check():
         "status": "ok",
         "message": "Backend API is functional",
         "version": "0.1.0"
+    }
+
+# Protected sample route to verify auth middleware
+@app.get("/api/protected-check")
+async def protected_check(username: str = Depends(require_authenticated_user)):
+    return {
+        "status": "ok",
+        "message": f"Hello {username}, you have authorized access."
     }
 
 # Static file serving
